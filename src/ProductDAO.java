@@ -1,4 +1,5 @@
 import java.sql.*;
+import java.util.UUID;
 
 //This class is the interface between the Database and the Product class
 //The methods contained in this class handle the actions performed in the database
@@ -8,12 +9,82 @@ public class ProductDAO {
     private static final String SELECT_ITEM_SQL = "SELECT id, name, quantity, price, type, description " + "FROM inventory_items WHERE name = ?";
     private static final String DELETE_ITEM_SQL = "DELETE FROM inventory_items WHERE name = ?";
     private static final String SELECT_ALL_SQL = "SELECT name, quantity, price FROM inventory_items";
+    private static final String UPDATE_ITEM_SQL = "UPDATE inventory_items SET quantity  = ? WHERE name = ?";
+    private static final String UPDATE_QUERY = "UPDATE inventory_items SET quantity = ? WHERE name = ?";
+    private static final String ORDER_QUERY = "INSERT INTO orders (order_id, product, quantity) VALUES (?, ?, ?)";
     private final DatabaseManager databaseManager;
+
+    private String generateRandomID(){
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
 
     public ProductDAO(DatabaseManager databaseManager) {
     this.databaseManager = databaseManager;
     }
 
+    public void updateItem(String name, int quantity)
+    {
+        try(Connection connection = databaseManager.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_ITEM_SQL))
+        {
+            preparedStatement.setInt(1,quantity);
+            preparedStatement.setString(2,name);
+            preparedStatement.executeUpdate();
+
+        }catch(SQLException e){
+            throw new RuntimeException(e);
+        }
+    }
+    public void placeOrder(String name, int quantityToOrder) {
+        try { Connection connection = databaseManager.getConnection();
+            // Check if there is enough quantity available
+            int currentQuantity = getQuantity(name);
+            if (currentQuantity < quantityToOrder) {
+                System.out.println("Not enough quantity available for product " + name);
+                return;
+            }
+
+            // Update the quantity in the database
+
+            int newQuantity = currentQuantity - quantityToOrder;
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_QUERY)) {
+                preparedStatement.setInt(1, newQuantity);
+                preparedStatement.setString(2, name);
+                preparedStatement.executeUpdate();
+            }
+            //Create a new order with unique id in the database
+            String order_id = generateRandomID();
+
+            try(PreparedStatement preparedStatement = connection.prepareStatement(ORDER_QUERY)){
+                preparedStatement.setString(1,order_id);
+                preparedStatement.setString(2,name);
+                preparedStatement.setInt(3,quantityToOrder);
+                preparedStatement.executeUpdate();
+            }
+            System.out.println("Order placed successfully for product " + name);
+
+        } catch (SQLException e) {
+            System.err.println("Error placing order: " + e.getMessage());
+        }
+    }
+    private int getQuantity(String name) throws SQLException {
+        Connection connection = databaseManager.getConnection();
+        String selectQuery = "SELECT quantity FROM inventory_items WHERE name = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(selectQuery)) {
+            preparedStatement.setString(1, name);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("quantity");
+                } else {
+                    System.out.println("Product with name " + name + " not found, please try again.");
+                    UserInterface.displayMenu();
+                    return 0;
+                }
+            }
+        }
+    }
     public void addItemToDatabase(Product product) {
             try (Connection connection = databaseManager.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(INSERT_ITEM_SQL)) {

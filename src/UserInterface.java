@@ -29,10 +29,11 @@ public class UserInterface {
     public static void printOptions(){
         System.out.println("""
                 1. Check inventory status.\s
-                2. Add an item.\s
+                2. Add a new item.\s
                 3. Remove an item.\s
                 4. Place an order.\s
-                5. Exit.""");
+                5. Update an item. \s
+                6. Exit.""");
 
     }
     public static void displayMenu(){
@@ -45,8 +46,9 @@ public class UserInterface {
                     case "1" -> inventoryStatus();
                     case "2" -> createProduct();
                     case "3" -> deleteProduct();
-                    case "4" -> System.out.println("4");
-                    case "5" -> {System.out.println("Bye bye!");
+                    case "4" -> placeOrder();
+                    case "5" -> updateItem();
+                    case "6" -> {System.out.println("Bye bye!");
                         return;
                     }
                     default -> System.out.println("You gave a bad input, try again.");
@@ -60,6 +62,8 @@ public class UserInterface {
             //Prompt for and store new product information
 
             String name = processUserInput("Enter the product name:",false);
+            //Parse double is used to ensure that program does not crash when a double is entered by the user, the value
+            //is then converted to an integer using casting to ensure it fits our database type
             int quantity = (int) Double.parseDouble(processUserInput("Enter the product's quantity:",true));
             double price = Double.parseDouble(processUserInput("Enter the product's price:",true));
             String type = processUserInput("Enter the product type:",false);
@@ -102,7 +106,23 @@ public class UserInterface {
 
             }
 
-            //functionality
+    public static void placeOrder() {
+        dao.selectAllItems();
+        String name = processUserInput("Please enter the name of the product you would like to order",false);
+        int quantity = (int)Double.parseDouble(processUserInput("How many of these would you like to order?", true));
+        dao.placeOrder(name, quantity);
+        System.out.println("You have placed an order for " + quantity + " units of " + name);
+
+    }
+
+    public static void updateItem(){
+        dao.selectAllItems();
+        String name = processUserInput("Which item would you like to update?",false);
+        int quantity = (int)Double.parseDouble(processUserInput("What should the new quantity be?",true));
+        dao.updateItem(name,quantity);
+        System.out.println("The " + name + " quantity has been successfully updated to " + quantity);
+    }
+                //functionality
         //used to allow users to restart a function with a custom message
         //Runnable enables us to repeat the method that we passed to it in the argument, allowing us to restart methods from inside
     private static boolean restart(String message,Runnable backToMenu) {

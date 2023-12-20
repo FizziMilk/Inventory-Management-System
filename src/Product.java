@@ -24,6 +24,7 @@ public class Product {
     }
 
     //method to generate a random unique ID
+    //perhaps need to make it
 
     private String generateRandomID(){
         UUID uuid = UUID.randomUUID();
